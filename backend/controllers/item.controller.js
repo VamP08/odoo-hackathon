@@ -1,9 +1,9 @@
-import db from '../db.js';
+import { query } from '../db.js';
 
 // Get all items
 export const getAllItems = async (req, res, next) => {
   try {
-    const result = await db.query(
+    const result = await query(
       'SELECT * FROM items ORDER BY created_at DESC'
     );
     res.json(result.rows);
@@ -15,7 +15,7 @@ export const getAllItems = async (req, res, next) => {
 // Get item by ID
 export const getItemById = async (req, res, next) => {
   try {
-    const result = await db.query(
+    const result = await query(
       'SELECT * FROM items WHERE id = $1',
       [req.params.id]
     );
@@ -32,7 +32,7 @@ export const getItemById = async (req, res, next) => {
 export const createItem = async (req, res, next) => {
   const { ownerId, categoryId, title, description, size, condition, pointCost } = req.body;
   try {
-    const result = await db.query(
+    const result = await query(
       'SELECT fn_list_item($1, $2, $3, $4, $5, $6, $7) AS item_id',
       [ownerId, categoryId, title, description, size, condition, pointCost]
     );
@@ -46,7 +46,7 @@ export const createItem = async (req, res, next) => {
 export const updateItem = async (req, res, next) => {
   const { title, description, size, condition, pointCost } = req.body;
   try {
-    const result = await db.query(
+    const result = await query(
       `UPDATE items
        SET title = $1, description = $2, size = $3, condition = $4, point_cost = $5, updated_at = NOW()
        WHERE id = $6
@@ -65,7 +65,7 @@ export const updateItem = async (req, res, next) => {
 // Delete item
 export const deleteItem = async (req, res, next) => {
   try {
-    const result = await db.query(
+    const result = await query(
       'DELETE FROM items WHERE id = $1 RETURNING id',
       [req.params.id]
     );
