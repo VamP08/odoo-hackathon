@@ -6,15 +6,16 @@ app.use(cors());
 app.use(express.json());
 
 // Import routes
-app.use('/api/users', require('./routes/users'));
-app.use('/api/items', require('./routes/items'));
-app.use('/api/swaps', require('./routes/swaps'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/points', require('./routes/points'));
+app.use('/api/users', require('./routes/user.route'));
+app.use('/api/items', require('./routes/item.route'));
+app.use('/api/swaps', require('./routes/swap.route'));
+app.use('/api/messages', require('./routes/message.route'));
+app.use('/api/points', require('./routes/point.route'));
 
 // Health check
 app.get('/', (req, res) => res.send('ReWear backend running!'));
 
+// Error handler (add this file if missing)
 const errorHandler = require('./middleware/errorHandler');
 app.use(errorHandler);
 
