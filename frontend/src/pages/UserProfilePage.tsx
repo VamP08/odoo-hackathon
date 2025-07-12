@@ -1,267 +1,235 @@
+// src/pages/UserProfilePage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Star, MapPin, Calendar, Award, MessageSquare, Shield, Package, TrendingUp } from 'lucide-react';
+import {
+  ArrowLeft,
+  Star,
+  Calendar,
+  Award,
+  Package,
+  TrendingUp
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { ItemCard } from '../components/Items/ItemCard';
-import { userService } from '../services/userService';
-import { itemService } from '../services/itemService';
+import { apiFetch } from '../utils/api';
 import { User, Item } from '../types';
+import { ItemCard } from '../components/Items/ItemCard';
 
 export function UserProfilePage() {
-    const { userId } = useParams<{ userId: string }>();
-    const { user: currentUser } = useAuth();
-    const [activeTab, setActiveTab] = useState('items');
-    const [userProfile, setUserProfile] = useState<User | null>(null);
-    const [userItems, setUserItems] = useState<Item[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { userId } = useParams<{ userId: string }>();
+  const { user: currentUser } = useAuth();
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (!userId) return;
+  const [profile, setProfile] = useState<User | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'items' | 'reviews'>('items');
 
-            try {
-                setLoading(true);
-                setError(null);
+  useEffect(() => {
+    if (!userId) return;
 
-                const [user, allItems] = await Promise.all([
-                    userService.getUserById(userId),
-                    itemService.getAllItems()
-                ]);
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch user
+        const uRes = await apiFetch(`/api/users/${userId}`);
+        if (!uRes.ok) throw new Error('Failed to load user');
+        const uData: User = await uRes.json();
+        setProfile(uData);
 
-                setUserProfile(user);
-                setUserItems(allItems.filter(item => item.owner_id === userId && item.is_approved));
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load user data');
-            } finally {
-                setLoading(false);
-            }
-        };
+        // Fetch items by owner_id and approved
+        const iRes = await apiFetch(`/api/items?owner_id=${userId}&is_approved=true`);
+        if (!iRes.ok) throw new Error('Failed to load items');
+        const iData: Item[] = await iRes.json();
+        setItems(iData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        fetchUserData();
-    }, [userId]);
+    fetchData();
+  }, [userId]);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading user profile...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error || !userProfile) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                        {error ? 'Error loading profile' : 'User not found'}
-                    </h2>
-                    {error && <p className="text-red-600 mb-4">{error}</p>}
-                    <Link to="/browse" className="text-emerald-600 hover:text-emerald-700">
-                        ← Back to browse
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
-    const isOwnProfile = currentUser?.id === userId;
-
+  if (loading) {
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Back Button */}
-                <Link
-                    to="/browse"
-                    className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6"
-                >
-                    <ArrowLeft className="h-5 w-5" />
-                    <span>Back to browse</span>
-                </Link>
-
-                {/* Profile Header */}
-                <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-                    <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
-                        <div className="relative">
-                            {userProfile.avatar_url ? (
-                                <img src={userProfile.avatar_url} alt={userProfile.full_name || 'User'} className="h-24 w-24 rounded-full" />
-                            ) : (
-                                <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <span className="text-2xl font-bold text-gray-600">
-                                        {(userProfile.full_name || userProfile.email).charAt(0).toUpperCase()}
-                                    </span>
-                                </div>
-                            )}
-                            {userProfile.role === 'admin' && (
-                                <div className="absolute -bottom-1 -right-1 bg-emerald-600 rounded-full p-1">
-                                    <Shield className="h-4 w-4 text-white" />
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex-1">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                                        {userProfile.full_name || userProfile.email}
-                                        {userProfile.role === 'admin' && (
-                                            <span className="ml-2 text-emerald-600">✓</span>
-                                        )}
-                                    </h1>
-
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
-                                        <div className="flex items-center space-x-1">
-                                            <Calendar className="h-4 w-4" />
-                                            <span>Joined {new Date(userProfile.created_at).toLocaleDateString()}</span>
-                                        </div>
-                                        <div className="flex items-center space-x-1">
-                                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                                            <span>5/5 (0 reviews)</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Admin Badge */}
-                                    {userProfile.role === 'admin' && (
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            <span className="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1">
-                                                <Award className="h-3 w-3" />
-                                                <span>Administrator</span>
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {!isOwnProfile && currentUser && (
-                                    <div className="flex space-x-3">
-                                        <Link
-                                            to={`/messages?user=${userId}`}
-                                            className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2"
-                                        >
-                                            <MessageSquare className="h-4 w-4" />
-                                            <span>Message</span>
-                                        </Link>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Total Swaps</p>
-                                <p className="text-2xl font-bold text-emerald-600">0</p>
-                            </div>
-                            <div className="bg-emerald-100 rounded-full p-3">
-                                <TrendingUp className="h-6 w-6 text-emerald-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Items Listed</p>
-                                <p className="text-2xl font-bold text-blue-600">{userItems.length}</p>
-                            </div>
-                            <div className="bg-blue-100 rounded-full p-3">
-                                <Package className="h-6 w-6 text-blue-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Rating</p>
-                                <p className="text-2xl font-bold text-yellow-600">5/5</p>
-                            </div>
-                            <div className="bg-yellow-100 rounded-full p-3">
-                                <Star className="h-6 w-6 text-yellow-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-gray-600">Points</p>
-                                <p className="text-2xl font-bold text-purple-600">{userProfile.points_balance}</p>
-                            </div>
-                            <div className="bg-purple-100 rounded-full p-3">
-                                <Award className="h-6 w-6 text-purple-600" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-
-                {/* Tabs */}
-                <div className="bg-white rounded-xl shadow-sm">
-                    <div className="border-b border-gray-200">
-                        <nav className="flex space-x-8 px-6">
-                            <button
-                                onClick={() => setActiveTab('items')}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'items'
-                                        ? 'border-emerald-500 text-emerald-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                            >
-                                Items ({userItems.length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('reviews')}
-                                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'reviews'
-                                        ? 'border-emerald-500 text-emerald-600'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                    }`}
-                            >
-                                Reviews (0)
-                            </button>
-                        </nav>
-                    </div>
-
-                    <div className="p-6">
-                        {activeTab === 'items' && (
-                            <div>
-                                {userItems.length > 0 ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                        {userItems.map(item => (
-                                            <ItemCard key={item.id} item={item} />
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                        <h3 className="text-lg font-medium text-gray-900 mb-2">No items listed</h3>
-                                        <p className="text-gray-600">
-                                            {isOwnProfile
-                                                ? "You haven't listed any items yet."
-                                                : `${userProfile.full_name || userProfile.email} hasn't listed any items yet.`
-                                            }
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {activeTab === 'reviews' && (
-                            <div className="text-center py-12">
-                                <Star className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">Reviews coming soon</h3>
-                                <p className="text-gray-600">User reviews and ratings will be displayed here.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-12 w-12 border-b-2 border-emerald-600 rounded-full mx-auto mb-4" />
+          <p className="text-gray-600">Loading profile...</p>
         </div>
+      </div>
     );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {error ? 'Error' : 'Not Found'}
+          </h2>
+          {error && <p className="text-red-600 mb-4">{error}</p>}
+          <Link to="/browse" className="text-emerald-600 hover:underline">
+            ← Back to browse
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwn = currentUser?.id === profile.id;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+        {/* Back */}
+        <Link to="/browse" className="inline-flex items-center text-gray-600 hover:text-gray-900">
+          <ArrowLeft className="h-5 w-5 mr-1" /> Back to browse
+        </Link>
+
+        {/* Profile Header */}
+        <div className="bg-white rounded-xl shadow p-6 flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
+          {/* Avatar */}
+          {profile.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.full_name || profile.email}
+              className="h-24 w-24 rounded-full object-cover"
+            />
+          ) : (
+            <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center">
+              <span className="text-3xl text-gray-600">
+                { (profile.full_name ?? profile.email)[0].toUpperCase() }
+              </span>
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="flex-1">
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {profile.full_name ?? profile.email}
+                  {profile.role === 'admin' && (
+                    <span className="ml-2 text-emerald-600">✓</span>
+                  )}
+                </h1>
+                <div className="flex flex-wrap items-center text-sm text-gray-600 space-x-4 mt-2">
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>Joined {new Date(profile.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Star className="h-4 w-4 text-yellow-400" />
+                    <span>5/5 (0 reviews)</span>
+                  </div>
+                </div>
+              </div>
+
+              {!isOwn && (
+                <Link
+                  to={`/messages?to=${profile.id}`}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition"
+                >
+                  Send Message
+                </Link>
+              )}
+            </div>
+
+            {profile.role === 'admin' && (
+              <div className="mt-4">
+                <span className="inline-flex items-center bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-sm">
+                  <Award className="h-4 w-4 mr-1" /> Administrator
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard label="Total Swaps" value="0" icon={TrendingUp} color="emerald" />
+          <StatCard label="Items Listed" value={String(items.length)} icon={Package} color="blue" />
+          <StatCard label="Rating" value="5/5" icon={Star} color="yellow" />
+          <StatCard label="Points" value={String(profile.points_balance)} icon={Award} color="purple" />
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow">
+          <TabNav active={activeTab} setActive={setActiveTab} counts={{ items: items.length, reviews: 0 }} />
+
+          <div className="p-6">
+            {activeTab === 'items' ? (
+              items.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {items.map(it => <ItemCard key={it.id} item={it} />)}
+                </div>
+              ) : (
+                <EmptyState message={
+                  isOwn
+                    ? "You haven't listed any items yet."
+                    : `${profile.full_name ?? profile.email} hasn't listed any items yet.`
+                } icon={Package} />
+              )
+            ) : (
+              <EmptyState message="Reviews coming soon." icon={Star} />
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper components:
+
+function StatCard({ label, value, icon: Icon, color }:
+  { label: string; value: string; icon: React.FC<any>; color: string }) {
+  return (
+    <div className="bg-white rounded-xl shadow p-6 flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">{label}</p>
+        <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
+      </div>
+      <div className={`bg-${color}-100 p-3 rounded-full`}>
+        <Icon className={`h-6 w-6 text-${color}-600`} />
+      </div>
+    </div>
+  );
+}
+
+function TabNav({ active, setActive, counts }:
+  { active: string; setActive: (t: 'items'|'reviews') => void; counts: { items: number; reviews: number } }) {
+  return (
+    <nav className="border-b border-gray-200">
+      <div className="flex space-x-8 px-6">
+        {(['items','reviews'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActive(tab)}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              active === tab
+                ? 'border-emerald-500 text-emerald-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)} ({counts[tab]})
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function EmptyState({ message, icon: Icon }:
+  { message: string; icon: React.FC<any> }) {
+  return (
+    <div className="text-center py-12">
+      <Icon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-medium text-gray-900 mb-2">{message}</h3>
+      <p className="text-gray-600">Check back later.</p>
+    </div>
+  );
 }

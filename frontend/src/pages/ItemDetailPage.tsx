@@ -1,133 +1,115 @@
+// src/pages/ItemDetailPage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, User, Calendar, Tag, Package, Shirt, MessageSquare } from 'lucide-react';
+import {
+  ArrowLeft,
+  Star,
+  User as UserIcon,
+  Calendar,
+  Tag,
+  Package,
+  Shirt
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { itemService } from '../services/itemService';
-import { swapService } from '../services/swapService';
-import { userService } from '../services/userService';
-import { pointService } from '../services/pointService';
-import { Item, User as UserType } from '../types';
+import { apiFetch } from '../utils/api';
+import { Item, User } from '../types';
 
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [item, setItem]       = useState<Item | null>(null);
+  const [owner, setOwner]     = useState<User | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [showSwapModal, setShowSwapModal] = useState(false);
-  const [showRedeemModal, setShowRedeemModal] = useState(false);
-  const [swapMessage, setSwapMessage] = useState('');
-  const [item, setItem] = useState<Item | null>(null);
-  const [uploaderProfile, setUploaderProfile] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+  const [swapMsg, setSwapMsg] = useState('');
+  const [showSwap, setShowSwap]     = useState(false);
+  const [showRedeem, setShowRedeem] = useState(false);
 
   useEffect(() => {
-    const fetchItemData = async () => {
-      if (!id) return;
-      
+    if (!id) return;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch item details
-        const itemData = await itemService.getItemById(id);
+        // 1) Fetch item
+        const resI = await apiFetch(`/api/items/${id}`);
+        if (!resI.ok) throw new Error('Item not found');
+        const itemData: Item = await resI.json();
         setItem(itemData);
-        
-        // Fetch uploader profile
-        if (itemData.owner_id) {
-          try {
-            const profile = await userService.getUserById(itemData.owner_id);
-            setUploaderProfile(profile);
-          } catch (err) {
-            console.error('Failed to fetch uploader profile:', err);
-          }
+
+        // 2) Fetch uploader
+        const resU = await apiFetch(`/api/users/${itemData.owner_id}`);
+        if (resU.ok) {
+          const userData: User = await resU.json();
+          setOwner(userData);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch item');
+        console.error(err);
+        setError(err instanceof Error ? err.message : 'Failed to load');
       } finally {
         setLoading(false);
       }
     };
-
-    fetchItemData();
+    load();
   }, [id]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading item details...</p>
-        </div>
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin h-12 w-12 border-b-2 border-emerald-600 rounded-full" />
+    </div>
+  );
+
+  if (error || !item) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <h2 className="text-xl text-red-600">{error || 'Item not found'}</h2>
+        <Link to="/browse" className="text-emerald-600 hover:underline">← Back</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (error || !item) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{error || 'Item not found'}</h2>
-          <Link to="/browse" className="text-emerald-600 hover:text-emerald-700">
-            ← Back to browse
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const canRedeem = user && item.point_cost && user.points_balance >= item.point_cost;
 
-  const handleSwapRequest = async () => {
-    if (!user) return;
-
-    try {
-      await swapService.createSwap({
-        requested_item_id: item.id,
-        // Note: offered_item_id is optional and would need to be selected from user's items
-      });
-
-      setShowSwapModal(false);
-      setSwapMessage('');
-      alert('Swap request sent successfully!');
-    } catch (err) {
-      console.error('Failed to create swap request:', err);
-      alert('Failed to send swap request. Please try again.');
-    }
+  // POST swap request
+  const requestSwap = async () => {
+    if (!user) return navigate('/login');
+    await apiFetch('/api/swaps', {
+      method: 'POST',
+      body: JSON.stringify({ requested_item_id: item.id })
+    });
+    alert('Swap requested!');
+    setShowSwap(false);
   };
 
-  const handleRedeemWithPoints = async () => {
-    if (!user || user.points_balance < (item.point_cost || 0)) return;
-
-    try {
-      // Deduct points from user
-      await pointService.createPointTransaction({
-        change_amount: -(item.point_cost || 0),
-        transaction_type: 'redeem',
+  // POST point redemption
+  const redeem = async () => {
+    if (!user) return navigate('/login');
+    await apiFetch('/api/points', {
+      method: 'POST',
+      body: JSON.stringify({
+        change_amount: -item.point_cost!,
+        transaction_type: 'redeem_item',
         reference_id: item.id
-      });
-
-      setShowRedeemModal(false);
-      alert('Item redeemed successfully! Contact the owner to arrange pickup/delivery.');
-    } catch (err) {
-      console.error('Failed to process redemption:', err);
-      alert('Failed to redeem item. Please try again.');
-    }
+      })
+    });
+    alert('Redeemed successfully!');
+    setShowRedeem(false);
   };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <Link 
-          to="/browse" 
-          className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>Back to browse</span>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 space-y-6">
+        <Link to="/browse" className="inline-flex items-center text-gray-600">
+          <ArrowLeft className="mr-1" /> Back
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Gallery */}
           <div>
-            <div className="aspect-square bg-white rounded-2xl overflow-hidden shadow-lg mb-4">
+            <div className="aspect-square bg-white rounded-2xl overflow-hidden mb-4 shadow">
               <img
                 src={item.images[selectedImage]}
                 alt={item.title}
@@ -136,229 +118,145 @@ export function ItemDetailPage() {
             </div>
             {item.images.length > 1 && (
               <div className="grid grid-cols-4 gap-2">
-                {item.images.map((image, index) => (
+                {item.images.map((src,i) => (
                   <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden ${
-                      selectedImage === index ? 'ring-2 ring-emerald-600' : ''
-                    }`}
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`aspect-square overflow-hidden rounded ${selectedImage===i?'ring-2 ring-emerald-600':''}`}
                   >
-                    <img src={image} alt={`${item.title} ${index + 1}`} className="w-full h-full object-cover" />
+                    <img src={src} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Item Details */}
-          <div>
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{item.title}</h1>
-                  <div className="flex items-center space-x-4">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      item.condition === 'New' ? 'bg-green-100 text-green-800' :
-                      item.condition === 'Like New' ? 'bg-blue-100 text-blue-800' :
-                      item.condition === 'Good' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {item.condition}
-                    </span>
-                    <div className="flex items-center space-x-1 bg-yellow-50 px-3 py-1 rounded-full">
-                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                      <span className="text-sm font-medium">{item.pointValue} points</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-gray-700 text-lg leading-relaxed mb-6">{item.description}</p>
-
-              {/* Item Details Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center space-x-2">
-                  <Package className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Category:</span>
-                  <span className="text-sm font-medium">{item.category}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Shirt className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Size:</span>
-                  <span className="text-sm font-medium">{item.size}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Tag className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Type:</span>
-                  <span className="text-sm font-medium">{item.type}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-5 w-5 text-gray-400" />
-                  <span className="text-sm text-gray-600">Listed:</span>
-                  <span className="text-sm font-medium">{item.uploadDate}</span>
-                </div>
-              </div>
-
-              {/* Tags */}
-              {item.tags.length > 0 && (
-                <div className="mb-6">
-                  <p className="text-sm text-gray-600 mb-2">Tags:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {item.tags.map(tag => (
-                      <span key={tag} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+          {/* Details */}
+          <div className="bg-white p-8 rounded-2xl shadow">
+            <h1 className="text-2xl font-bold mb-2">{item.title}</h1>
+            <div className="flex items-center space-x-3 mb-4">
+              <span className={`px-2 py-1 rounded-full text-sm ${
+                item.condition==='New'      ? 'bg-green-100 text-green-800' :
+                item.condition==='Like New'? 'bg-blue-100 text-blue-800' :
+                item.condition==='Good'    ? 'bg-yellow-100 text-yellow-800' :
+                'bg-gray-100 text-gray-800'
+              }`}>{item.condition}</span>
+              {item.point_cost && (
+                <span className="bg-yellow-50 px-2 py-1 rounded-full flex items-center space-x-1">
+                  <Star className="text-yellow-500 h-4 w-4"/>
+                  <span>{item.point_cost} pts</span>
+                </span>
               )}
+            </div>
 
-              {/* Uploader Info */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <div className="flex items-center space-x-3">
-                  {uploaderProfile?.avatar ? (
-                    <img src={uploaderProfile.avatar} alt={uploaderProfile.name} className="h-12 w-12 rounded-full" />
-                  ) : (
-                    <User className="h-12 w-12 text-gray-400" />
-                  )}
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <Link 
-                        to={`/profile/${item.uploaderId}`}
-                        className="font-medium text-gray-900 hover:text-emerald-600 transition-colors"
-                      >
-                        {item.uploaderName}
-                      </Link>
-                      {uploaderProfile?.isVerified && (
-                        <span className="text-emerald-600">✓</span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      {uploaderProfile?.totalSwaps || 0} swaps • {uploaderProfile?.rating || 0}/5 rating
-                    </p>
-                  </div>
+            <p className="mb-6 text-gray-700">{item.description}</p>
+
+            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600 mb-6">
+              <div className="flex items-center space-x-2">
+                <Package className="h-5 w-5"/>
+                <span>Category:</span><span>{item.category_id}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Shirt className="h-5 w-5"/>
+                <span>Size:</span><span>{item.size}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Tag className="h-5 w-5"/>
+                <span>Condition:</span><span>{item.condition}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="h-5 w-5"/>
+                <span>Listed:</span><span>{new Date(item.created_at).toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            {/* Owner */}
+            {owner && (
+              <div className="bg-gray-50 p-4 rounded-lg flex items-center mb-6">
+                {owner.avatar_url
+                  ? <img src={owner.avatar_url} className="h-12 w-12 rounded-full mr-3"/>
+                  : <UserIcon className="h-12 w-12 text-gray-400 mr-3"/>
+                }
+                <div>
+                  <Link to={`/profile/${owner.id}`} className="font-medium hover:underline">
+                    {owner.full_name || owner.email}
+                  </Link>
+                  <p className="text-sm text-gray-600">
+                    Joined {new Date(owner.created_at).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
+            )}
 
-              {/* Action Buttons */}
-              {user && user.id !== item.uploaderId ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Actions */}
+            <div className="space-y-4">
+              {user?.id !== item.owner_id ? (
+                <>
                   <button
-                    onClick={() => setShowSwapModal(true)}
-                    className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-colors"
+                    onClick={() => setShowSwap(true)}
+                    className="w-full bg-emerald-600 text-white py-3 rounded-lg"
                   >
                     Request Swap
                   </button>
                   <button
-                    onClick={() => setShowRedeemModal(true)}
-                    className="border-2 border-emerald-600 text-emerald-600 px-6 py-3 rounded-xl font-semibold hover:bg-emerald-50 transition-colors"
-                    disabled={user.points < item.pointValue}
+                    disabled={!canRedeem}
+                    onClick={() => setShowRedeem(true)}
+                    className="w-full border border-emerald-600 text-emerald-600 py-3 rounded-lg disabled:opacity-50"
                   >
-                    Redeem with Points ({item.pointValue})
+                    Redeem ({item.point_cost} pts)
                   </button>
-                </div>
-              ) : !user ? (
-                <div className="text-center">
-                  <p className="text-gray-600 mb-4">Please log in to request a swap</p>
-                  <Link
-                    to="/login"
-                    className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition-colors inline-block"
-                  >
-                    Log In
-                  </Link>
-                </div>
+                </>
               ) : (
-                <div className="bg-blue-50 p-4 rounded-xl">
-                  <p className="text-blue-800 text-center">This is your own item</p>
-                </div>
+                <p className="text-center text-gray-500">This is your item</p>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Redeem Confirmation Modal */}
-      {showRedeemModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Redeem with Points</h3>
-            <p className="text-gray-600 mb-4">
-              You're about to redeem "{item.title}" for {item.pointValue} points.
-            </p>
-            
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Your current points:</span>
-                <span className="font-semibold">{user?.points}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Points needed:</span>
-                <span className="font-semibold">{item.pointValue}</span>
-              </div>
-              <hr className="my-2" />
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Remaining points:</span>
-                <span className="font-semibold">{(user?.points || 0) - item.pointValue}</span>
-              </div>
-            </div>
-      {/* Swap Request Modal */}
-      {showSwapModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Request Swap</h3>
-            <p className="text-gray-600 mb-4">
-              Send a swap request for "{item.title}" to {item.uploaderName}.
-            </p>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Message (optional)
-              </label>
-              <textarea
-                value={swapMessage}
-                onChange={(e) => setSwapMessage(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                rows={3}
-                placeholder="Add a personal message..."
-              />
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowRedeemModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRedeemWithPoints}
-                className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
-              >
-                Redeem Item
-              </button>
-            </div>
+      {/* Redeem Modal */}
+      {showRedeem && (
+        <Modal onClose={() => setShowRedeem(false)}>
+          <h3 className="text-lg font-bold mb-4">Confirm Redemption</h3>
+          <p className="mb-6">Redeem "{item.title}" for {item.point_cost} points?</p>
+          <div className="flex justify-end space-x-3">
+            <button onClick={() => setShowRedeem(false)} className="px-4 py-2">Cancel</button>
+            <button onClick={redeem} className="px-4 py-2 bg-emerald-600 text-white rounded">Confirm</button>
           </div>
-        </div>
+        </Modal>
       )}
 
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowSwapModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSwapRequest}
-                className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700"
-              >
-                Send Request
-              </button>
-            </div>
+      {/* Swap Modal */}
+      {showSwap && (
+        <Modal onClose={() => setShowSwap(false)}>
+          <h3 className="text-lg font-bold mb-4">Request Swap</h3>
+          <textarea
+            value={swapMsg}
+            onChange={e => setSwapMsg(e.target.value)}
+            placeholder="Optional message…"
+            className="w-full border p-2 rounded mb-4"
+            rows={3}
+          />
+          <div className="flex justify-end space-x-3">
+            <button onClick={() => setShowSwap(false)} className="px-4 py-2">Cancel</button>
+            <button onClick={requestSwap} className="px-4 py-2 bg-emerald-600 text-white rounded">
+              Send Request
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
+    </div>
+  );
+}
+
+// Generic modal wrapper
+function Modal({ children, onClose }: { children: React.ReactNode; onClose: ()=>void }) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+        {children}
+      </div>
+      <button onClick={onClose} className="fixed inset-0 w-full h-full" aria-label="Close"></button>
     </div>
   );
 }

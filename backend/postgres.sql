@@ -43,7 +43,6 @@ CREATE TABLE password_resets (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-
 -- 3. Categories, Tags & Search
 --------------------------------------------------
 CREATE TABLE categories (
