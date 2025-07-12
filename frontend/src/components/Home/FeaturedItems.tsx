@@ -48,7 +48,7 @@ export function FeaturedItems() {
               >
                 <div className="aspect-w-4 aspect-h-3 overflow-hidden">
                   <img
-                    src={item.images?.[0]}
+                    src={item.images?.[0] || '/placeholder.jpg'}
                     alt={item.title}
                     className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -72,7 +72,7 @@ export function FeaturedItems() {
                     <div className="flex items-center space-x-1">
                       <Star className="h-4 w-4 text-yellow-400 fill-current" />
                       <span className="text-sm text-gray-600">
-                        {item.pointValue} pts
+                        {item.point_cost ?? 0} pts
                       </span>
                     </div>
                   </div>
@@ -84,17 +84,17 @@ export function FeaturedItems() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      {item.uploaderAvatar ? (
+                      {item.ownerAvatar ? (
                         <img
-                          src={item.uploaderAvatar}
-                          alt={item.uploaderName}
+                          src={item.ownerAvatar}
+                          alt={item.ownerName}
                           className="h-8 w-8 rounded-full"
                         />
                       ) : (
                         <User className="h-8 w-8 text-gray-400" />
                       )}
                       <span className="text-sm text-gray-600">
-                        {item.uploaderName}
+                        {item.ownerName ?? 'Anonymous'}
                       </span>
                     </div>
 

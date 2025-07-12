@@ -1,90 +1,114 @@
+// types/index.ts
+
+export type UserRole = 'user' | 'admin';
+export type ItemStatus = 'available' | 'pending_swap' | 'pending_redemption' | 'swapped' | 'redeemed' | 'archived';
+export type SwapStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+export type RedemptionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type Condition = 'New' | 'Like New' | 'Good' | 'Fair';
+
 export interface User {
   id: string;
   email: string;
+  full_name?: string;
+  avatar_url?: string;
+  role: UserRole;
+  points_balance: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Category {
+  id: number;
   name: string;
-  points: number;
-  role: 'user' | 'admin';
-  avatar?: string;
-  joinedDate: string;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
 }
 
 export interface Item {
   id: string;
+  owner_id: string;
+  category_id: number | null;
   title: string;
-  description: string;
-  images: string[];
-  category: string;
-  type: string;
-  size: string;
-  condition: 'New' | 'Like New' | 'Good' | 'Fair';
-  tags: string[];
-  pointValue: number;
-  uploaderId: string;
-  uploaderName: string;
-  uploaderAvatar?: string;
-  uploadDate: string;
-  status: 'available' | 'pending' | 'swapped';
-  approved: boolean;
+  description?: string;
+  size?: string;
+  condition?: string;
+  status: ItemStatus;
+  point_cost?: number;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+
+  // hydrated fields
+  images: string[]; // pulled from item_images
+  tags?: string[];
+  ownerName?: string;
+  ownerAvatar?: string;
 }
 
-export interface SwapRequest {
+export interface ItemImage {
   id: string;
-  requesterId: string;
-  requesterName: string;
+  item_id: string;
+  image_url: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface Swap {
+  id: string;
+  requester_id: string;
+  requested_item_id: string;
+  offered_item_id?: string;
+  status: SwapStatus;
+  created_at: string;
+  updated_at: string;
+
+  // hydrated
+  requesterName?: string;
   requesterAvatar?: string;
-  itemId: string;
-  itemTitle: string;
-  itemImage: string;
-  itemOwnerId: string;
-  itemOwnerName: string;
-  offeredItemId?: string;
+  requestedItemTitle?: string;
   offeredItemTitle?: string;
   offeredItemImage?: string;
-  pointsOffered?: number;
-  status: 'pending' | 'accepted' | 'rejected' | 'completed';
-  createdDate: string;
-  completedDate?: string;
-  message: string;
-  response?: string;
-  meetupLocation?: string;
-  shippingAddress?: string;
-  trackingNumber?: string;
 }
 
-export interface Message {
+export interface Redemption {
   id: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar?: string;
-  receiverId: string;
-  swapRequestId?: string;
-  content: string;
-  timestamp: string;
-  read: boolean;
+  user_id: string;
+  item_id: string;
+  status: RedemptionStatus;
+  created_at: string;
+  updated_at: string;
+
+  // hydrated
+  itemTitle?: string;
 }
 
-export interface PointTransaction {
+export interface PointsTransaction {
   id: string;
-  userId: string;
-  type: 'earned' | 'spent' | 'bonus' | 'refund';
-  amount: number;
-  description: string;
-  relatedItemId?: string;
-  relatedItemTitle?: string;
-  relatedSwapId?: string;
-  timestamp: string;
+  user_id: string;
+  change_amount: number;
+  transaction_type: string; // can be refined to an enum like 'earn_listing', etc.
+  reference_id?: string;
+  created_at: string;
+
+  // hydrated
+  itemTitle?: string;
 }
 
-export interface UserProfile extends User {
-  bio?: string;
-  location?: string;
-  favoriteCategories: string[];
-  totalSwaps: number;
+export interface Review {
+  id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  item_id?: string;
   rating: number;
-  reviewCount: number;
-  badges: string[];
-  isVerified: boolean;
-  lastActive: string;
+  comment?: string;
+  created_at: string;
+
+  // hydrated
+  reviewerName?: string;
+  revieweeName?: string;
 }
 
 export interface AuthContextType {
