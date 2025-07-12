@@ -3,33 +3,12 @@ import { User, AuthContextType } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data
-const mockUsers: User[] = [
-  {
-    id: '1',
-    email: 'user@example.com',
-    name: 'Sarah Johnson',
-    points: 150,
-    role: 'user',
-    avatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
-    joinedDate: '2024-01-15'
-  },
-  {
-    id: '2',
-    email: 'admin@rewear.com',
-    name: 'Admin User',
-    points: 0,
-    role: 'admin',
-    joinedDate: '2024-01-01'
-  }
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore user on page refresh
   useEffect(() => {
-    // Check for stored user session
     const storedUser = localStorage.getItem('rewear_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -39,39 +18,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     setLoading(true);
-    
-    // Mock authentication
-    const foundUser = mockUsers.find(u => u.email === email);
-    if (foundUser && password === 'password') {
-      setUser(foundUser);
-      localStorage.setItem('rewear_user', JSON.stringify(foundUser));
-    } else {
-      throw new Error('Invalid credentials');
+    try {
+      const response = await fetch('http://localhost:4000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Login failed');
+      }
+
+      const { user: userData, token } = await response.json();
+      localStorage.setItem('rewear_token', token);
+      localStorage.setItem('rewear_user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (err) {
+      throw err;
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const signup = async (email: string, password: string, name: string) => {
     setLoading(true);
-    
-    // Mock user creation
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      email,
-      name,
-      points: 50, // Welcome bonus
-      role: 'user',
-      joinedDate: new Date().toISOString().split('T')[0]
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('rewear_user', JSON.stringify(newUser));
-    setLoading(false);
+    try {
+      const response = await fetch('http://localhost:4000/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Signup failed');
+      }
+
+      const { user: userData, token } = await response.json();
+      localStorage.setItem('rewear_token', token);
+      localStorage.setItem('rewear_user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (err) {
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('rewear_token');
     localStorage.removeItem('rewear_user');
   };
 
@@ -80,14 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     signup,
     logout,
-    loading
+    loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

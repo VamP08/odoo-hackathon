@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Upload, X, Plus, Camera } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useApp } from '../contexts/AppContext';
+
 
 export function AddItemPage() {
   const { user } = useAuth();

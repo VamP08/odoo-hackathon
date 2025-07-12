@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Recycle, Users, Gift } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export function HeroSection() {
+  const { user } = useAuth();
+
   return (
     <div className="bg-gradient-to-br from-emerald-50 via-white to-orange-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -16,20 +19,32 @@ export function HeroSection() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link
-              to="/signup"
-              className="bg-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
-            >
-              <span>Start Swapping</span>
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            
-            <Link
-              to="/browse"
-              className="border-2 border-emerald-600 text-emerald-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200"
-            >
-              Browse Items
-            </Link>
+            {!user ? (
+              <>
+                <Link
+                  to="/signup"
+                  className="bg-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+                >
+                  <span>Start Swapping</span>
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+
+                <Link
+                  to="/browse"
+                  className="border-2 border-emerald-600 text-emerald-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-50 transition-all duration-200"
+                >
+                  Browse Items
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/browse"
+                className="bg-emerald-600 text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+              >
+                <span>Explore Closet</span>
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
@@ -57,9 +72,9 @@ export function HeroSection() {
               <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Gift className="h-8 w-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Points & Rewards</h3>
+              <h3 className="text-xl font-semibold mb-2">Real Points & Rewards</h3>
               <p className="text-gray-600">
-                Earn points for each item you share and redeem them for pieces you love.
+                Earn points for every approved item you contribute — and spend them on items you love.
               </p>
             </div>
           </div>

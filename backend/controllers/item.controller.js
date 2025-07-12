@@ -77,3 +77,21 @@ export const deleteItem = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getFeaturedItems = async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT i.*, COUNT(sr.id) AS swap_count
+      FROM items i
+      LEFT JOIN swap_requests sr ON i.id = sr.requestedItemId
+      WHERE i.approved = true
+      GROUP BY i.id
+      ORDER BY swap_count DESC
+      LIMIT 3
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching featured items:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}

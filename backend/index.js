@@ -9,6 +9,7 @@ import userRoutes from './routes/user.route.js';
 import itemRoutes from './routes/item.route.js';
 import swapRoutes from './routes/swap.route.js';
 import pointRoutes from './routes/point.route.js';
+import authRoutes from './routes/auth.route.js';
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/swaps', swapRoutes);
 app.use('/api/points', pointRoutes);
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/', (req, res) => res.send('ReWear backend running!'));

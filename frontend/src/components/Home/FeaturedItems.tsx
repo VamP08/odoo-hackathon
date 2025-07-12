@@ -1,11 +1,27 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, User } from 'lucide-react';
-import { useApp } from '../../contexts/AppContext';
+import { Item } from '../../types';
+import { apiFetch } from '../../utils/api';
 
 export function FeaturedItems() {
-  const { items } = useApp();
-  const featuredItems = items.filter(item => item.approved).slice(0, 3);
+  const [featuredItems, setFeaturedItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const response = await apiFetch('http://localhost:4000/api/items/featured');
+        const data = await response.json();
+        setFeaturedItems(data);
+      } catch (error) {
+        console.error('Failed to fetch featured items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFeatured();
+  }, []);
 
   return (
     <div className="bg-white py-20">
@@ -19,58 +35,82 @@ export function FeaturedItems() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {featuredItems.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group">
-              <div className="aspect-w-4 aspect-h-3 overflow-hidden">
-                <img
-                  src={item.images[0]}
-                  alt={item.title}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-              
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    item.condition === 'New' ? 'bg-green-100 text-green-800' :
-                    item.condition === 'Like New' ? 'bg-blue-100 text-blue-800' :
-                    item.condition === 'Good' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {item.condition}
-                  </span>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm text-gray-600">{item.pointValue} pts</span>
-                  </div>
+        {loading ? (
+          <p className="text-center text-gray-500">Loading featured items...</p>
+        ) : featuredItems.length === 0 ? (
+          <p className="text-center text-gray-500">No featured items yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+            {featuredItems.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow group"
+              >
+                <div className="aspect-w-4 aspect-h-3 overflow-hidden">
+                  <img
+                    src={item.images?.[0]}
+                    alt={item.title}
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
 
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{item.description}</p>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {item.uploaderAvatar ? (
-                      <img src={item.uploaderAvatar} alt={item.uploaderName} className="h-8 w-8 rounded-full" />
-                    ) : (
-                      <User className="h-8 w-8 text-gray-400" />
-                    )}
-                    <span className="text-sm text-gray-600">{item.uploaderName}</span>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        item.condition === 'New'
+                          ? 'bg-green-100 text-green-800'
+                          : item.condition === 'Like New'
+                          ? 'bg-blue-100 text-blue-800'
+                          : item.condition === 'Good'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {item.condition}
+                    </span>
+                    <div className="flex items-center space-x-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="text-sm text-gray-600">
+                        {item.pointValue} pts
+                      </span>
+                    </div>
                   </div>
 
-                  <Link
-                    to={`/item/${item.id}`}
-                    className="text-emerald-600 hover:text-emerald-700 text-sm font-medium flex items-center space-x-1"
-                  >
-                    <span>View Details</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{item.title}</h3>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {item.description}
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      {item.uploaderAvatar ? (
+                        <img
+                          src={item.uploaderAvatar}
+                          alt={item.uploaderName}
+                          className="h-8 w-8 rounded-full"
+                        />
+                      ) : (
+                        <User className="h-8 w-8 text-gray-400" />
+                      )}
+                      <span className="text-sm text-gray-600">
+                        {item.uploaderName}
+                      </span>
+                    </div>
+
+                    <Link
+                      to={`/item/${item.id}`}
+                      className="text-emerald-600 hover:text-emerald-700 text-sm font-medium flex items-center space-x-1"
+                    >
+                      <span>View Details</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         <div className="text-center">
           <Link
