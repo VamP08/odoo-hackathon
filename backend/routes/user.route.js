@@ -1,8 +1,8 @@
 import express from 'express';
+import auth from '../middleware/auth.js';
+import usersController from '../controllers/user.controller.js';
 
 const router = express.Router();
-const usersController = require('../controllers/user.controller'); 
-const auth = require('../middleware/auth');
 
 router.get('/', auth, usersController.getAllUsers); // admin only
 router.get('/:id', auth, usersController.getUserById);

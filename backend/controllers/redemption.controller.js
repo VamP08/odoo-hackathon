@@ -1,6 +1,6 @@
+import db from '../db.js';
 
-import db from '../db';
-
+// Approve a redemption request (admin action)
 export const approveRedemption = async (req, res, next) => {
   const { redemptionId } = req.body;
   try {

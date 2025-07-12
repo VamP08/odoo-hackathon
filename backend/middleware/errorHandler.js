@@ -1,5 +1,11 @@
 
-export default function (err, req, res, next) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function errorHandler(err, req, res, _next) {
   console.error(err.stack);
-  res.status(500).json({ error: err.message || 'Internal Server Error' });
-};
+  const status = err.status || 500;
+  const message = err.message || 'Internal Server Error';
+  res.status(status).json({
+    success: false,
+    error: message,
+  });
+}
