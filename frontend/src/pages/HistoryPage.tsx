@@ -1,13 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { History, Package, ArrowUpDown, Star, Calendar, User, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useApp } from '../contexts/AppContext';
+import { swapService } from '../services/swapService';
+import { pointService } from '../services/pointService';
+import { itemService } from '../services/itemService';
 
 export function HistoryPage() {
   const { user } = useAuth();
-  const { swapRequests, pointTransactions, items } = useApp();
   const [activeTab, setActiveTab] = useState<'swaps' | 'points'>('swaps');
+  const [swapRequests, setSwapRequests] = useState<any[]>([]);
+  const [pointTransactions, setPointTransactions] = useState<any[]>([]);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) return;
+      
+      try {
+        const [swapsData, pointsData, itemsData] = await Promise.all([
+          swapService.getAllSwaps(),
+          pointService.getAllPointTransactions(),
+          itemService.getAllItems()
+        ]);
+        
+        setSwapRequests(swapsData);
+        setPointTransactions(pointsData);
+        setItems(itemsData);
+      } catch (error) {
+        console.error('Error fetching history data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   if (!user) {
     return (
@@ -17,6 +46,17 @@ export function HistoryPage() {
           <Link to="/login" className="text-emerald-600 hover:text-emerald-700">
             Go to login
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+          <p className="mt-4 text-gray-600">Loading history...</p>
         </div>
       </div>
     );

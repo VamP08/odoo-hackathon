@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Star, User } from 'lucide-react';
 import { Item } from '../../types';
-import { apiFetch } from '../../utils/api';
+import { itemService } from '../../services';
 
 export function FeaturedItems() {
   const [featuredItems, setFeaturedItems] = useState<Item[]>([]);
@@ -11,8 +11,7 @@ export function FeaturedItems() {
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        const response = await apiFetch('http://localhost:4000/api/items/featured');
-        const data = await response.json();
+        const data = await itemService.getFeaturedItems();
         setFeaturedItems(data);
       } catch (error) {
         console.error('Failed to fetch featured items:', error);

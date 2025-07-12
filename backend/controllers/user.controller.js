@@ -38,7 +38,9 @@ export const createUser = async (req, res, next) => {
 };
 
 export const updateUser = async (req, res, next) => {
-  const { fullName, avatarUrl } = req.body;
+  const { full_name, avatar_url } = req.body;
+  const fullName = full_name;
+  const avatarUrl = avatar_url;
   try {
     const result = await query(
       `UPDATE users

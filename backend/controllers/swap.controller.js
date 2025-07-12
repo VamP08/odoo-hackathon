@@ -34,7 +34,9 @@ export const getSwapById = async (req, res, next) => {
 
 // Create a new swap request
 export const createSwap = async (req, res, next) => {
-  const { requestedItemId, offeredItemId } = req.body;
+  const { requested_item_id, offered_item_id } = req.body;
+  const requestedItemId = requested_item_id;
+  const offeredItemId = offered_item_id;
   try {
     const result = await query(
       'SELECT fn_request_swap($1, $2, $3) AS swap_id',

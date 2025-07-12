@@ -2,17 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { MessageSquare, Send, ArrowLeft, User, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useApp } from '../contexts/AppContext';
 
 export function MessagesPage() {
   const { user } = useAuth();
-  const { messages, sendMessage, markMessageAsRead, userProfiles } = useApp();
   const [searchParams] = useSearchParams();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(
     searchParams.get('user')
   );
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [userProfiles, setUserProfiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Mock data for now since messaging wasn't fully implemented in backend
+  useEffect(() => {
+    setMessages([]);
+    setUserProfiles([]);
+    setLoading(false);
+  }, []);
+
+  const sendMessage = (messageData: any) => {
+    // TODO: Implement with API call
+    console.log('Send message:', messageData);
+  };
+
+  const markMessageAsRead = (messageId: string) => {
+    // TODO: Implement with API call
+    console.log('Mark as read:', messageId);
+  };
 
   if (!user) {
     return (
@@ -22,6 +40,17 @@ export function MessagesPage() {
           <Link to="/login" className="text-emerald-600 hover:text-emerald-700">
             Go to login
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-emerald-600"></div>
+          <p className="mt-4 text-gray-600">Loading messages...</p>
         </div>
       </div>
     );

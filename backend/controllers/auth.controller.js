@@ -11,14 +11,22 @@ const generateToken = (user) => {
 };
 
 export const signup = async (req, res, next) => {
-  const { email, password, fullName } = req.body;
+  const { email, password, name } = req.body;
+  const fullName = name;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const result = await query(
       'SELECT fn_signup_user($1, $2, $3) AS user_id',
       [email, hashedPassword, fullName]
     );
-    const newUser = { id: result.rows[0].user_id, email, role: 'user' };
+    const userId = result.rows[0].user_id;
+    
+    // Get the full user data
+    const userResult = await query(
+      'SELECT id, email, full_name, avatar_url, role, points_balance, created_at FROM users WHERE id = $1',
+      [userId]
+    );
+    const newUser = userResult.rows[0];
     const token = generateToken(newUser);
     res.status(201).json({ user: newUser, token });
   } catch (err) {

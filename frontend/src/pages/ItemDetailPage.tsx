@@ -1,26 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Star, User, Calendar, Tag, Package, Shirt, MessageSquare } from 'lucide-react';
-import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
+import { itemService } from '../services/itemService';
+import { swapService } from '../services/swapService';
+import { userService } from '../services/userService';
+import { pointService } from '../services/pointService';
+import { Item, User as UserType } from '../types';
 
 export function ItemDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { items, createSwapRequest, getUserProfile, addPointTransaction } = useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [swapMessage, setSwapMessage] = useState('');
+  const [item, setItem] = useState<Item | null>(null);
+  const [uploaderProfile, setUploaderProfile] = useState<UserType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const item = items.find(i => i.id === id);
+  useEffect(() => {
+    const fetchItemData = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch item details
+        const itemData = await itemService.getItemById(id);
+        setItem(itemData);
+        
+        // Fetch uploader profile
+        if (itemData.owner_id) {
+          try {
+            const profile = await userService.getUserById(itemData.owner_id);
+            setUploaderProfile(profile);
+          } catch (err) {
+            console.error('Failed to fetch uploader profile:', err);
+          }
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch item');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!item) {
+    fetchItemData();
+  }, [id]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Item not found</h2>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading item details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !item) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{error || 'Item not found'}</h2>
           <Link to="/browse" className="text-emerald-600 hover:text-emerald-700">
             ← Back to browse
           </Link>
@@ -29,55 +76,41 @@ export function ItemDetailPage() {
     );
   }
 
-  const uploaderProfile = getUserProfile(item.uploaderId);
-
-  const handleSwapRequest = () => {
+  const handleSwapRequest = async () => {
     if (!user) return;
 
-    createSwapRequest({
-      requesterId: user.id,
-      requesterName: user.name,
-      requesterAvatar: user.avatar,
-      itemId: item.id,
-      itemTitle: item.title,
-      itemImage: item.images[0],
-      itemOwnerId: item.uploaderId,
-      itemOwnerName: item.uploaderName,
-      pointsOffered: item.pointValue,
-      status: 'pending',
-      message: swapMessage || 'I would like to swap for this item.'
-    });
+    try {
+      await swapService.createSwap({
+        requested_item_id: item.id,
+        // Note: offered_item_id is optional and would need to be selected from user's items
+      });
 
-    setShowSwapModal(false);
-    setSwapMessage('');
-    alert('Swap request sent successfully!');
+      setShowSwapModal(false);
+      setSwapMessage('');
+      alert('Swap request sent successfully!');
+    } catch (err) {
+      console.error('Failed to create swap request:', err);
+      alert('Failed to send swap request. Please try again.');
+    }
   };
 
-  const handleRedeemWithPoints = () => {
-    if (!user || user.points < item.pointValue) return;
+  const handleRedeemWithPoints = async () => {
+    if (!user || user.points_balance < (item.point_cost || 0)) return;
 
-    // Deduct points from user
-    addPointTransaction({
-      userId: user.id,
-      type: 'spent',
-      amount: -item.pointValue,
-      description: `Redeemed ${item.title}`,
-      relatedItemId: item.id,
-      relatedItemTitle: item.title
-    });
+    try {
+      // Deduct points from user
+      await pointService.createPointTransaction({
+        change_amount: -(item.point_cost || 0),
+        transaction_type: 'redeem',
+        reference_id: item.id
+      });
 
-    // Award points to item owner
-    addPointTransaction({
-      userId: item.uploaderId,
-      type: 'earned',
-      amount: item.pointValue,
-      description: `Points earned from ${item.title}`,
-      relatedItemId: item.id,
-      relatedItemTitle: item.title
-    });
-
-    setShowRedeemModal(false);
-    alert('Item redeemed successfully! Contact the owner to arrange pickup/delivery.');
+      setShowRedeemModal(false);
+      alert('Item redeemed successfully! Contact the owner to arrange pickup/delivery.');
+    } catch (err) {
+      console.error('Failed to process redemption:', err);
+      alert('Failed to redeem item. Please try again.');
+    }
   };
   return (
     <div className="min-h-screen bg-gray-50">

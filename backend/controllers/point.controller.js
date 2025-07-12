@@ -32,7 +32,10 @@ export const getPointTransactionById = async (req, res, next) => {
 
 // Create a new point transaction (example: admin/manual adjustment)
 export const createPointTransaction = async (req, res, next) => {
-  const { changeAmount, transactionType, referenceId } = req.body;
+  const { change_amount, transaction_type, reference_id } = req.body;
+  const changeAmount = change_amount;
+  const transactionType = transaction_type;
+  const referenceId = reference_id;
   try {
     const result = await query(
       `INSERT INTO points_transactions (user_id, change_amount, transaction_type, reference_id)

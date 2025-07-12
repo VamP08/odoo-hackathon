@@ -30,7 +30,10 @@ export const getItemById = async (req, res, next) => {
 
 // Create item (uses stored procedure)
 export const createItem = async (req, res, next) => {
-  const { ownerId, categoryId, title, description, size, condition, pointCost } = req.body;
+  const { owner_id, category_id, title, description, size, condition, point_cost } = req.body;
+  const ownerId = owner_id || req.user?.id;
+  const categoryId = category_id;
+  const pointCost = point_cost;
   try {
     const result = await query(
       'SELECT fn_list_item($1, $2, $3, $4, $5, $6, $7) AS item_id',
@@ -81,10 +84,10 @@ export const deleteItem = async (req, res, next) => {
 export const getFeaturedItems = async (req, res) => {
   try {
     const result = await query(`
-      SELECT i.*, COUNT(sr.id) AS swap_count
+      SELECT i.*, COUNT(s.id) AS swap_count
       FROM items i
-      LEFT JOIN swap_requests sr ON i.id = sr.requestedItemId
-      WHERE i.approved = true
+      LEFT JOIN swaps s ON i.id = s.requested_item_id
+      WHERE i.is_approved = true
       GROUP BY i.id
       ORDER BY swap_count DESC
       LIMIT 3
