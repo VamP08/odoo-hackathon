@@ -30,10 +30,12 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Platform</h3>
             <ul className="space-y-2 text-gray-300">
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">How It Works</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Point System</a></li>
-              <li><a href="#" className="hover:text-emerald-400 transition-colors">Safety Guidelines</a></li>
+              <ul className="space-y-2 text-gray-300">
+              <li><a href="/how-it-works" className="hover:text-emerald-400 transition-colors">How It Works</a></li>
+              <li><a href="/point-system" className="hover:text-emerald-400 transition-colors">Point System</a></li>
+              <li><a href="/safety-guidelines" className="hover:text-emerald-400 transition-colors">Safety Guidelines</a></li>
               <li><a href="#" className="hover:text-emerald-400 transition-colors">FAQ</a></li>
+              </ul>
             </ul>
           </div>
 

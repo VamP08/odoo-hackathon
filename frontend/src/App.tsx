@@ -16,6 +16,9 @@ import { SwapRequestsPage } from './pages/SwapRequestsPage';
 import { MessagesPage } from './pages/MessagesPage';
 import { UserProfilePage } from './pages/UserProfilePage';
 import { HistoryPage } from './pages/HistoryPage';
+import { SafetyGuidelines } from './pages/SafetyGuidelines';
+import { HowitWorks } from './pages/HowitWorks';
+import { PointSystem } from './pages/PointSystem';
 
 function App() {
   return (
@@ -38,6 +41,9 @@ function App() {
                 <Route path="/profile/:userId" element={<UserProfilePage />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/admin" element={<AdminPage />} />
+                <Route path="/safety-guidelines" element={<SafetyGuidelines />} />
+                <Route path="/how-it-works" element={<HowitWorks />} />
+                <Route path="/point-system" element={<PointSystem />} />
               </Routes>
             </main>
             <Footer />
