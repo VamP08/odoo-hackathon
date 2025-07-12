@@ -1,5 +1,6 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
+
 const app = express();
 
 app.use(cors());
@@ -9,7 +10,6 @@ app.use(express.json());
 app.use('/api/users', require('./routes/user.route'));
 app.use('/api/items', require('./routes/item.route'));
 app.use('/api/swaps', require('./routes/swap.route'));
-app.use('/api/messages', require('./routes/message.route'));
 app.use('/api/points', require('./routes/point.route'));
 
 // Health check

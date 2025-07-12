@@ -9,4 +9,4 @@ class User {
     this.joinedDate = joinedDate;
   }
 }
-module.exports = User;
+export default User;

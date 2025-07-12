@@ -1,3 +1,4 @@
+
 class Item {
   constructor({ id, uploaderId, title, description, images, category, size, condition, tags, approved, status, pointValue }) {
     this.id = id;
@@ -14,4 +15,4 @@ class Item {
     this.pointValue = pointValue;
   }
 }
-module.exports = Item;
+export default Item;

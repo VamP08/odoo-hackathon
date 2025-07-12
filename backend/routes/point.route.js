@@ -1,10 +1,14 @@
-const express = require('express');
+import express from 'express';
+import pointsController from '../controllers/point.controller.js';
+import auth from '../middleware/auth.js';
+
 const router = express.Router();
-const pointsController = require('../controllers/point.controller');
-const auth = require('../middleware/auth');
 
-router.get('/', pointsController.getAllPointTransactions);
-router.get('/:id', pointsController.getPointTransactionById);
-router.post('/', auth, pointsController.createPointTransaction);
+// Only authenticated users should access their own point transactions.
+// Creating a point transaction should also require authentication.
 
-module.exports = router;
+router.get('/', auth, pointsController.getAllPointTransactions);         // Protected: only logged-in users
+router.get('/:id', auth, pointsController.getPointTransactionById);      // Protected: only logged-in users
+router.post('/', auth, pointsController.createPointTransaction);         // Protected: only logged-in users
+
+export default router;

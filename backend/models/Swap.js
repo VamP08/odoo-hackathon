@@ -1,4 +1,4 @@
-// filepath: backend/models/Swap.js
+
 class Swap {
   constructor({ id, itemId, requesterId, ownerId, status, createdDate, message }) {
     this.id = id;
@@ -10,4 +10,5 @@ class Swap {
     this.message = message;
   }
 }
-module.exports = Swap;
+
+export default Swap;

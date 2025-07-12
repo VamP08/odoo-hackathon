@@ -1,3 +1,4 @@
+
 class PointTransaction {
   constructor({ id, userId, amount, type, date, description }) {
     this.id = id;
@@ -8,4 +9,4 @@ class PointTransaction {
     this.description = description;
   }
 }
-module.exports = PointTransaction;
+export default PointTransaction;
