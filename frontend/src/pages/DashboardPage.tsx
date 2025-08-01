@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 // src/pages/DashboardPage.tsx
+=======
+>>>>>>> 4c90d0dfcf0f292d3ade582ac876a29d733f77df
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -9,6 +12,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+<<<<<<< HEAD
 import { apiFetch } from '../utils/api';
 import { Item, Swap, PointsTransaction } from '../types';
 

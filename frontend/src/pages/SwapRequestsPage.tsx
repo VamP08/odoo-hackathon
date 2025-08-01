@@ -11,16 +11,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
-import { Swap, Item } from '../types';
+import { SwapStatus, Item } from '../types';
 
 export function SwapRequestsPage() {
   const { user } = useAuth();
-  const [swaps, setSwaps] = useState<Swap[]>([]);
+  const [swaps, setSwaps] = useState<SwapStatus[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'incoming' | 'outgoing'>('incoming');
-
+  
   useEffect(() => {
     if (!user) return;
 
@@ -72,14 +72,14 @@ export function SwapRequestsPage() {
   const outgoing = swaps.filter(swap => swap.requester_id === user.id);
 
   // Update swap status by PUT /api/swaps/:id
-  const updateStatus = async (swapId: string, status: Swap['status']) => {
+  const updateStatus = async (swapId: string, status: SwapStatus['status']) => {
     try {
       const res = await apiFetch(`/api/swaps/${swapId}`, {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error('Failed to update swap');
-      const updated: Swap = await res.json();
+      const updated: SwapStatus = await res.json();
       setSwaps(prev => prev.map(s => s.id === swapId ? updated : s));
     } catch (err) {
       console.error(err);
